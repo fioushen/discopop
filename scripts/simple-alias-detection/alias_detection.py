@@ -31,9 +31,9 @@ def __get_alias_from_statement(var_name: str, var_type: str, statement: str) -> 
     """TODO"""
     # prune statement
     if ":" in statement:
-        statement = statement[statement.rindex(":")+1:]
+        statement = statement[statement.rindex(":") + 1:]
     # var_name in statement?
-    reg = r"\W"+re.escape(var_name)+r"\W"
+    reg = r"\W" + re.escape(var_name) + r"\W"
     search_string = re.search(reg, statement)
     try:
         search_string = search_string[0]
@@ -60,9 +60,9 @@ def __get_alias_from_statement(var_name: str, var_type: str, statement: str) -> 
             if idx == 0:
                 stmt = statement[:indices[idx]]
             elif idx == len(indices) - 1:
-                stmt = statement[indices[idx-1]+1:index + 1]
+                stmt = statement[indices[idx - 1] + 1:index + 1]
             else:
-                stmt = statement[indices[idx - 1] + 1: indices[ idx]]
+                stmt = statement[indices[idx - 1] + 1: indices[idx]]
             tmp = __get_alias_from_statement(var_name, var_type, stmt)
             if tmp is not None:
                 aliases += tmp
@@ -89,7 +89,7 @@ def __get_alias_from_statement(var_name: str, var_type: str, statement: str) -> 
         # left branch in diagram
         # var_name has index access?
         if right_hand_side.index(var_name) + len(var_name) < len(right_hand_side):
-            if right_hand_side[right_hand_side.index(var_name)+len(var_name)] == "[":
+            if right_hand_side[right_hand_side.index(var_name) + len(var_name)] == "[":
                 return None
         # '*' prior to var_name?
         if right_hand_side.index(var_name) - 1 >= 0:
@@ -99,11 +99,13 @@ def __get_alias_from_statement(var_name: str, var_type: str, statement: str) -> 
         if right_hand_side.index(var_name) - 2 >= 0:
             if right_hand_side[right_hand_side.index(var_name) - 2] == "*" and \
                     right_hand_side[right_hand_side.index(var_name) - 1] == "(":
-                if ")" not in right_hand_side[right_hand_side.index(var_name) - 2:right_hand_side.index(var_name) + len(var_name)]:
+                if ")" not in right_hand_side[
+                              right_hand_side.index(var_name) - 2:right_hand_side.index(var_name) + len(var_name)]:
                     return None
         # '->' after var_name?
-        if right_hand_side.index(var_name)+len(var_name)+2 > len(right_hand_side):
-            if right_hand_side[right_hand_side.index(var_name) + len(var_name): right_hand_side.index(var_name) + len(var_name)+1] == "->":
+        if right_hand_side.index(var_name) + len(var_name) + 2 > len(right_hand_side):
+            if right_hand_side[right_hand_side.index(var_name) + len(var_name): right_hand_side.index(var_name) + len(
+                    var_name) + 1] == "->":
                 return None
     else:
         # right branch in diagram
@@ -160,7 +162,7 @@ def __add_alias_information(function_information_list: List[Dict], statements_fi
         with open(statements_file, "r") as sf:
             for line in sf.readlines():
                 line_file_id = line[:line.index(":")]
-                line_code_line = line[line.index(":") + 1 : ]
+                line_code_line = line[line.index(":") + 1:]
                 line_code_line = line_code_line[: line_code_line.index(":")]
                 if file_id != line_file_id:
                     continue
@@ -178,7 +180,6 @@ def __add_alias_information(function_information_list: List[Dict], statements_fi
         function_information["aliases"] = []
         for arg_idx, arg_name in enumerate(function_information["args"]):
             aliases = []
-            last_found_alias = None
             for statement in relevant_statements:
                 # search for first-level aliases
                 statement_result = __get_alias_from_statement(arg_name, function_information["arg_types"][arg_idx],
@@ -248,11 +249,12 @@ def __create_statements_file(file_mapping: str, output_file: str, application_pa
     # execute application for each file in file_mapping
     print("execute getStatements application for each file in file mapping.")
     for file in file_mapping_dict:
-        process = subprocess.Popen(application_path + " " + file + " >> " + output_file, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        process = subprocess.Popen(application_path + " " + file + " >> " + output_file, shell=True,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         process.wait()
     # cleanup results and replace paths with file-ids
-    if os.path.exists(output_file+"_tmp"):
-        os.remove(output_file+"_tmp")
+    if os.path.exists(output_file + "_tmp"):
+        os.remove(output_file + "_tmp")
     with open(output_file + "_tmp", "w+") as tmp_of:
         with open(output_file, "r") as of:
             for line in of.readlines():
@@ -307,18 +309,17 @@ def main():
     print("\tDone.")
     os.chdir("..")
     # remove output file if it already exists
-    if os.path.exists(output_file+"_statements"):
-        os.remove(output_file+"_statements")
+    if os.path.exists(output_file + "_statements"):
+        os.remove(output_file + "_statements")
     # create statements file
-    __create_statements_file(file_mapping, output_file+"_statements", parent_dir + "/build/getStatements")
+    __create_statements_file(file_mapping, output_file + "_statements", parent_dir + "/build/getStatements")
     # get function information file
     function_information = __get_function_information(cu_xml)
     # add alias information to function_information
-    function_information = __add_alias_information(function_information, output_file+"_statements")
+    function_information = __add_alias_information(function_information, output_file + "_statements")
     # cleanup
     # reset working directory
     os.chdir(original_cwd)
-
 
 
 if __name__ == "__main__":
