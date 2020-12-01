@@ -152,8 +152,6 @@ def __add_alias_information(function_information_list: List[Dict], statements_fi
     Alias detection ignores a=b=c constellations."""
     result_list = []
     for function_information in function_information_list:
-        print()
-        print("FNAME: ", function_information["name"])
         file_id = function_information["id"].split(":")[0]
         body_start_line = function_information["startsAtLine"].split(":")[1]
         body_end_line = function_information["endsAtLine"].split(":")[1]
@@ -202,10 +200,6 @@ def __add_alias_information(function_information_list: List[Dict], statements_fi
                     aliases += statement_result
             aliases = list(set(aliases))
             function_information["aliases"].append(aliases)
-            if len(aliases) > 0:
-                print("\targ_name: ", arg_name)
-                print("\t\taliases: ", aliases)
-
         result_list.append(function_information)
     return result_list
 
@@ -247,7 +241,6 @@ def __create_statements_file(file_mapping: str, output_file: str, application_pa
             line = line.split("\t")
             file_mapping_dict[line[1]] = line[0]
     # execute application for each file in file_mapping
-    print("execute getStatements application for each file in file mapping.")
     for file in file_mapping_dict:
         process = subprocess.Popen(application_path + " " + file + " >> " + output_file, shell=True,
                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -275,7 +268,6 @@ def __create_statements_file(file_mapping: str, output_file: str, application_pa
                 tmp_of.write(line + "\n")
     os.remove(output_file)
     os.rename(output_file + "_tmp", output_file)
-    print("\tDone.")
 
 
 def main():
@@ -303,21 +295,33 @@ def main():
     if not os.path.exists(parent_dir + "/build"):
         os.mkdir(parent_dir + "/build")
     os.chdir(parent_dir + "/build")
-    print("Building getStatements application...")
     process = subprocess.Popen("cmake .. && make", shell=True, stdout=subprocess.PIPE)
     process.wait()
-    print("\tDone.")
     os.chdir("..")
     # remove output file if it already exists
     if os.path.exists(output_file + "_statements"):
         os.remove(output_file + "_statements")
+    if os.path.exists(output_file):
+        os.remove(output_file)
     # create statements file
     __create_statements_file(file_mapping, output_file + "_statements", parent_dir + "/build/getStatements")
     # get function information file
     function_information = __get_function_information(cu_xml)
     # add alias information to function_information
     function_information = __add_alias_information(function_information, output_file + "_statements")
+    # create alias output file
+    with open(output_file, "w+") as of:
+        for fn_info in function_information:
+            if len(fn_info["args"]) == 0:
+                continue
+            for idx, alias_entry in enumerate(fn_info["aliases"]):
+                if len(alias_entry) > 0:
+                    for alias_name in alias_entry:
+                        of.write(fn_info["id"] + ";" + fn_info["name"] + ";" + fn_info["args"][
+                            idx] + ";" + alias_name + "\n")
     # cleanup
+    if os.path.exists(output_file + "_statements"):
+        os.remove(output_file + "_statements")
     # reset working directory
     os.chdir(original_cwd)
 
