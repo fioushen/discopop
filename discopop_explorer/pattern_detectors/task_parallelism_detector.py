@@ -2421,7 +2421,7 @@ def __sort_output(suggestions: List[PatternInfo]) -> List[PatternInfo]:
         tmp_dict[file_id].append((start_line, sug))
     # sort suggestions by line-number (descending)
     for key in tmp_dict:
-        sorted_list = sorted(tmp_dict[key], key=lambda x: x[0], reverse=True)
+        sorted_list = sorted(tmp_dict[key], key=lambda x: int(x[0]), reverse=True)
         sorted_list = [elem[1] for elem in sorted_list]
         sorted_suggestions += sorted_list
     return sorted_suggestions
