@@ -626,7 +626,6 @@ def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[Pa
     aliases = __get_alias_information(pet, suggestions, source_code_files)
     # get function-internal parameter aliases
     function_parameter_alias_dict = __get_function_internal_parameter_aliases(file_mapping_path, cu_xml)
-    print(function_parameter_alias_dict)
     # find dependencies between calls of different functions inside function scopes
     suggestions = __identify_dependencies_for_different_functions(pet, suggestions, aliases, source_code_files,
                                                                   raw_dependency_information)
@@ -636,7 +635,8 @@ def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[Pa
     return suggestions
 
 
-def __get_function_internal_parameter_aliases(file_mapping_path: str, cu_xml_path: str) -> Dict[str, List[Tuple[str, str]]]:
+def __get_function_internal_parameter_aliases(file_mapping_path: str, cu_xml_path: str) -> Dict[
+    str, List[Tuple[str, str]]]:
     """Wrapper to execute simple alias analysis and parse results into dict (function name to list of alias-tuples).
     :result function-internal alias detection results in dict form"""
     # execute simple alias detection
@@ -835,7 +835,8 @@ def __get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, 
                                                                 function_raw_information_cache: Dict[str, List[bool]],
                                                                 cu_inst_result_dict: Dict[
                                                                     str, List[Dict[str, Optional[str]]]],
-                                                                function_parameter_alias_dict: Dict[str, List[Tuple[str, str]]],
+                                                                function_parameter_alias_dict: Dict[
+                                                                    str, List[Tuple[str, str]]],
                                                                 source_code_files: Dict[str, str]) \
         -> Tuple[List[CUNode], str, List[bool], Dict[str, List[bool]]]:
     """Wrapper to execute __get_function_call_parameter_rw_information recursively,
@@ -910,13 +911,10 @@ def __get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, 
                             called_function_args_raw_information[idx] = (var_name, raw_info or child_raw_info)
 
     # if parameter alias entry for parent function exists:
-    # TODO
     if called_function_cu.name in function_parameter_alias_dict:
-        print("IN: FUNCTION: ", called_function_cu.name)
         alias_entries = function_parameter_alias_dict[called_function_cu.name]
         for (var_name, alias_name) in alias_entries:
             var_name_is_modified = False
-            print("Var_name: ", var_name)
             # check if alias_name occurs in any depencendy in any of called_function_cu's children,
             # recursively visits all children cu nodes in function body.
             function_internal_cu_nodes: List[CUNode] = []  # TODO remove pet.direct_children(called_function_cu)
@@ -937,25 +935,18 @@ def __get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, 
             for child_cu in function_internal_cu_nodes:
                 child_in_deps = pet.in_edges(child_cu.id, EdgeType.DATA)
                 child_out_deps = pet.out_edges(child_cu.id, EdgeType.DATA)
-                dep_var_names = [x[2].var_name for x in child_in_deps + child_out_deps]  # TODO only in-deps might be sufficient
+                dep_var_names = [x[2].var_name for x in
+                                 child_in_deps + child_out_deps]  # TODO only in-deps might be sufficient
                 dep_var_names = [x.replace(".addr", "") for x in dep_var_names]
                 if alias_name in dep_var_names:
-                    print("\talias modified: ", alias_name)
                     var_name_is_modified = True
                     break
             if var_name_is_modified:
                 # update RAW information
                 for idx, (old_var_name, raw_info) in enumerate(called_function_args_raw_information):
-                    print("\tcheck: ", old_var_name, " -> ", var_name)
                     if old_var_name == var_name:
-                        print("\t\tOLD_VAR_NAME == VAR_NAME")
-                        print("\t\traw_info: ", raw_info)
-                        # TODO HERE
                         if not raw_info:
                             called_function_args_raw_information[idx] = (old_var_name, True)
-                            print("ALIAS MODIFICATION FOUND FOR: ", old_var_name, "  alias: ", alias_name)
-    else:
-        print("OUT: FUNCTION: ", called_function_cu.name)
     # remove names from called_function_args_raw_information
     called_function_args_raw_information = [e[1] for e in called_function_args_raw_information]
     return (
@@ -1888,7 +1879,6 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
             suggestion = cast(TaskParallelismInfo, suggestion)
             if suggestion.pragma[0] != "task" and suggestion.pragma[0] != "taskloop":
                 continue
-            print("SUGGESTION NODE ID: ", suggestion._node.id, "  LINE: ", suggestion.pragma_line)
             # get function containing the task cu
             parent_function, last_node = \
                 __get_parent_of_type(pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True)[0]
@@ -1921,8 +1911,8 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                                                                           cu_node.end_position()):
                                             continue
                                         # check if path from suggestion._node to cu_node exists
-                                        print("CHECK suggestion._node: ", suggestion._node.id, "  ->  ", cu_node.id, "  REACHABLE: ", __check_reachability(pet, suggestion._node, cu_node, [EdgeType.SUCCESSOR, EdgeType.CHILD]), "  VAR: ", var)
-                                        if __check_reachability(pet, suggestion._node, cu_node, [EdgeType.SUCCESSOR, EdgeType.CHILD]):
+                                        if __check_reachability(pet, suggestion._node, cu_node,
+                                                                [EdgeType.SUCCESSOR, EdgeType.CHILD]):
                                             is_valid = True
                         else:
                             pass
@@ -1932,7 +1922,6 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                     modification_found = True
                     to_be_removed.append(var)
             to_be_removed = list(set(to_be_removed))
-            print("REMOVE IN: ", to_be_removed)
             suggestion.in_dep = [v for v in suggestion.in_dep if not v.replace(".addr", "") in to_be_removed]
             # filter out_dep
             to_be_removed = []
@@ -1963,7 +1952,8 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                                                                           cu_node.end_position()):
                                             continue
                                         # check if path from suggestion._node to cu_node exists
-                                        if __check_reachability(pet, cu_node, suggestion._node, [EdgeType.SUCCESSOR, EdgeType.CHILD]):
+                                        if __check_reachability(pet, cu_node, suggestion._node,
+                                                                [EdgeType.SUCCESSOR, EdgeType.CHILD]):
                                             is_valid = True
 
                         else:
@@ -1974,7 +1964,6 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                     to_be_removed.append(var)
                     modification_found = True
             to_be_removed = list(set(to_be_removed))
-            print("REMOVE OUT: ", to_be_removed)
             suggestion.out_dep = [v for v in suggestion.out_dep if not v.replace(".addr", "") in to_be_removed]
             # filter in_out_dep
             to_be_removed = []
@@ -2009,7 +1998,8 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                                                                           cu_node.end_position()):
                                             continue
                                         # check if path from suggestion._node to cu_node exists
-                                        if __check_reachability(pet, suggestion._node, cu_node, [EdgeType.SUCCESSOR, EdgeType.CHILD]):
+                                        if __check_reachability(pet, suggestion._node, cu_node,
+                                                                [EdgeType.SUCCESSOR, EdgeType.CHILD]):
                                             prior_out_exists = True
                                 for line_num in in_dep_vars[var]:
                                     line_num = str(line_num)
@@ -2025,7 +2015,8 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                                                                           cu_node.end_position()):
                                             continue
                                         # check if path from suggestion._node to cu_node exists
-                                        if __check_reachability(pet,  cu_node, suggestion._node, [EdgeType.SUCCESSOR, EdgeType.CHILD]):
+                                        if __check_reachability(pet, cu_node, suggestion._node,
+                                                                [EdgeType.SUCCESSOR, EdgeType.CHILD]):
                                             successive_in_exists = True
                                 # check and treat conditions
                                 if prior_out_exists and successive_in_exists:
@@ -2047,7 +2038,6 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                     to_be_removed.append(var)
                     modification_found = True
             to_be_removed = list(set(to_be_removed))
-            print("REMOVE INOUT: ", to_be_removed)
             suggestion.in_out_dep = [v for v in suggestion.in_out_dep if not v.replace(".addr", "") in to_be_removed]
 
             # correct in_out_vars (find in_out vars if not already detected)
