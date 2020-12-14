@@ -298,7 +298,7 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str,
     result = __remove_duplicates(result)
     result = __correct_task_suggestions_in_loop_body(pet, result)
     result = __filter_data_sharing_clauses(pet, result, __get_var_definition_line_dict(cu_xml))
-    result = __filter_data_depend_clauses(pet, result, __get_var_definition_line_dict(cu_xml))
+    # result = __filter_data_depend_clauses(pet, result, __get_var_definition_line_dict(cu_xml))
     result = __remove_duplicate_data_sharing_clauses(result)
     result = __sort_output(result)
 
@@ -626,6 +626,7 @@ def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[Pa
     aliases = __get_alias_information(pet, suggestions, source_code_files)
     # get function-internal parameter aliases
     function_parameter_alias_dict = __get_function_internal_parameter_aliases(file_mapping_path, cu_xml)
+    print(function_parameter_alias_dict)
     # find dependencies between calls of different functions inside function scopes
     suggestions = __identify_dependencies_for_different_functions(pet, suggestions, aliases, source_code_files,
                                                                   raw_dependency_information)
@@ -911,25 +912,50 @@ def __get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, 
     # if parameter alias entry for parent function exists:
     # TODO
     if called_function_cu.name in function_parameter_alias_dict:
+        print("IN: FUNCTION: ", called_function_cu.name)
         alias_entries = function_parameter_alias_dict[called_function_cu.name]
         for (var_name, alias_name) in alias_entries:
             var_name_is_modified = False
-            # check if alias_name occurs in any depencendy in any of called_function_cu's children
-            for child_cu in pet.direct_children(called_function_cu):
+            print("Var_name: ", var_name)
+            # check if alias_name occurs in any depencendy in any of called_function_cu's children,
+            # recursively visits all children cu nodes in function body.
+            function_internal_cu_nodes: List[CUNode] = []  # TODO remove pet.direct_children(called_function_cu)
+            queue: List[CUNode] = [called_function_cu]
+            while len(queue) > 0:
+                cur: CUNode = queue.pop(0)
+                # check if cur inside function body, append to function_internal_cu_nodes if so
+                if __line_contained_in_region(cur.start_position(), called_function_cu.start_position(),
+                                              called_function_cu.end_position()) and \
+                        __line_contained_in_region(cur.end_position(), called_function_cu.start_position(),
+                                                   called_function_cu.end_position()):
+                    function_internal_cu_nodes.append(cur)
+                # add children to queue
+                for cur_child in pet.direct_children(cur):
+                    if cur_child not in function_internal_cu_nodes and \
+                            cur_child not in queue:
+                        queue.append(cur_child)
+            for child_cu in function_internal_cu_nodes:
                 child_in_deps = pet.in_edges(child_cu.id, EdgeType.DATA)
                 child_out_deps = pet.out_edges(child_cu.id, EdgeType.DATA)
-                dep_var_names = [x[2].var_name for x in child_in_deps + child_out_deps]
+                dep_var_names = [x[2].var_name for x in child_in_deps + child_out_deps]  # TODO only in-deps might be sufficient
                 dep_var_names = [x.replace(".addr", "") for x in dep_var_names]
                 if alias_name in dep_var_names:
+                    print("\talias modified: ", alias_name)
                     var_name_is_modified = True
                     break
             if var_name_is_modified:
                 # update RAW information
                 for idx, (old_var_name, raw_info) in enumerate(called_function_args_raw_information):
+                    print("\tcheck: ", old_var_name, " -> ", var_name)
                     if old_var_name == var_name:
+                        print("\t\tOLD_VAR_NAME == VAR_NAME")
+                        print("\t\traw_info: ", raw_info)
+                        # TODO HERE
                         if not raw_info:
                             called_function_args_raw_information[idx] = (old_var_name, True)
                             print("ALIAS MODIFICATION FOUND FOR: ", old_var_name, "  alias: ", alias_name)
+    else:
+        print("OUT: FUNCTION: ", called_function_cu.name)
     # remove names from called_function_args_raw_information
     called_function_args_raw_information = [e[1] for e in called_function_args_raw_information]
     return (
